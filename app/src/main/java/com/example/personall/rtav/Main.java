@@ -50,49 +50,51 @@ public class Main extends Activity {
                         public void run()
                         {
                             Log.e("Decodc", "Thread is running.2");
-                            try
-                            {
-                                Thread.sleep(100);
-                            }
-                            catch(Exception e)
-                            {
-                                e.printStackTrace();
-                            }
 
-                    /*
-                    int width=352;
-                    int height=177;
-                    MediaFormat format = m_Extractor.getTrackFormat(0);
-                    String mime=format.getString(MediaFormat.KEY_MIME);
-                    MediaFormat mediaFormat = MediaFormat.createVideoFormat(mime, width, height);
-                    // */
-
-                            //*/
-
-
-                            //*
+                            /*
                             MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc",352, 288);
                             mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, 125000);
-                            mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, 25);
+                            mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, 24);
                             mediaFormat.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 1);
-                            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar);
+                            //mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar);
+                            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar);
+                            //mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar);
                             mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 5);
+                            */
                             //*
+                            Log.e("decoder","decode wile begin_3");
+                        try {
+                            m_Extractor  = new MediaExtractor();
+                            String fileString="/storage/sdcard/1.264";
+                            m_Extractor.setDataSource(fileString);
 
-                            //*
+
+                            for (int i = 0; i < m_Extractor.getTrackCount(); i++) {
+                                MediaFormat format = m_Extractor.getTrackFormat(i);
+                                String mime = format.getString(MediaFormat.KEY_MIME);
+                                if (mime.startsWith("video/")) {
+                                    m_Extractor.selectTrack(i);
+                                    m_Codec = MediaCodec.createDecoderByType(mime);
+                                    m_Codec.configure(format, m_Surface, null, 0);
+                                    break;
+                                }
+                            }
+
+
+                            /*
                             m_Codec = MediaCodec.createDecoderByType("video/avc");
+                            Log.e("decoder","decode wile begin_4");
                             m_Codec.configure(mediaFormat, m_Surface, null, 0);
-
+                            */
                             if(m_Codec == null)
                             {
                                 Log.e("Decodc","can't find video info");
                                 return;
                             }
 
+                            Log.e("decoder","decode wile begin_1");
                             m_Codec.start();
                             //*/
-
-
 
                             Socket sc;
                             DataInputStream netInputStream;
@@ -102,54 +104,62 @@ public class Main extends Activity {
                             String ip = "192.168.0.61";
                             int port = 3000;
 
-                            try {
+                            Log.e("decoder","decode wile begin_2");
+
+
+
+
+
+
                                 sc = new Socket(ip, port);
 
                                 netInputStream = new DataInputStream(sc.getInputStream());
                                 netOutputStream = new DataOutputStream(sc.getOutputStream());
 
-                        //*
-                        ByteBuffer[] inputBuffers = m_Codec.getInputBuffers();
-                        ByteBuffer[] outputBuffers = m_Codec.getOutputBuffers();
-//*/
+                                //*
+                                ByteBuffer[] inputBuffers = m_Codec.getInputBuffers();
+                                ByteBuffer[] outputBuffers = m_Codec.getOutputBuffers();
+                                //*/
 
-                                byte[] buffcontent = new byte[1204];
+                                byte[] buffcontent = new byte[100*1204];
 
                                 int mCount=0;
                                 int length;
 
-
                                 while(true)
                                 {
-                                    int ct = netInputStream.read(buffcontent);
+                                    //int ct = netInputStream.read(buffcontent);
 
-                                    System.out.println("__read "+ct+" bytes."+buffcontent[0]+":"+buffcontent[1]);
+                                    System.out.println("__read "+1+" bytes."+buffcontent[0]+":"+buffcontent[1]);
 
-                                    length = ct;
-
-                            /*
-                            if (ct<0)
-                            {
-                                System.out.println("read error");
-                                break;
-                            }
-                            */
+                                    //length = ct;
 //*
-                            int inputBufferIndex = m_Codec.dequeueInputBuffer(-1);
-                            if (inputBufferIndex>=0){
-                                ByteBuffer inputBuffer = inputBuffers[inputBufferIndex];
-                                inputBuffer.clear();
-                                inputBuffer.put(buffcontent,0,length);
-                                m_Codec.queueInputBuffer(inputBufferIndex, 0, length, mCount * 1000000 / 15, 0);
-                                mCount++;
-                            }
+                                    int inputBufferIndex = m_Codec.dequeueInputBuffer(-1);
+                                    if (inputBufferIndex>=0){
+                                        ByteBuffer inputBuffer = inputBuffers[inputBufferIndex];
 
-                            MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
-                            int outputBufferIndex = m_Codec.dequeueOutputBuffer(bufferInfo,0);
-                            if (outputBufferIndex >= 0) {
-                                m_Codec.releaseOutputBuffer(outputBufferIndex, true);
-                                outputBufferIndex = m_Codec.dequeueOutputBuffer(bufferInfo, 0);
-                            }
+                                        int sampleSize = m_Extractor.readSampleData(inputBuffer, 0);
+
+                                        m_Codec.queueInputBuffer(inputBufferIndex, 0, sampleSize,
+                                                m_Extractor.getSampleTime(), 0);
+                                        m_Extractor.advance();
+
+
+                                        System.out.println("__read: "+sampleSize+" bytes."+buffcontent[0]+":"+buffcontent[1]);
+/*
+                                        inputBuffer.clear();
+                                        inputBuffer.put(buffcontent,0,length);
+                                        m_Codec.queueInputBuffer(inputBufferIndex, 0, length, mCount * 1000000 / 25, 0);
+                                        mCount++;
+                                    */
+                                    }
+
+                                    MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
+                                    int outputBufferIndex = m_Codec.dequeueOutputBuffer(bufferInfo,0);
+                                    if (outputBufferIndex >= 0) {
+                                        m_Codec.releaseOutputBuffer(outputBufferIndex, true);
+                                        outputBufferIndex = m_Codec.dequeueOutputBuffer(bufferInfo, 0);
+                                    }
 //*/
                                     System.out.println("read next frame");
                                 }
