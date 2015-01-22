@@ -68,8 +68,13 @@ public class Main extends Activity {
                             String fileString="/storage/sdcard/1.264";
                             m_Extractor.setDataSource(fileString);
 
+                            Log.e("CODEC","count:"+m_Extractor.getTrackCount());
 
+                            return;
+
+/*
                             for (int i = 0; i < m_Extractor.getTrackCount(); i++) {
+
                                 MediaFormat format = m_Extractor.getTrackFormat(i);
                                 String mime = format.getString(MediaFormat.KEY_MIME);
                                 if (mime.startsWith("video/")) {
@@ -78,14 +83,16 @@ public class Main extends Activity {
                                     m_Codec.configure(format, m_Surface, null, 0);
                                     break;
                                 }
-                            }
 
+                            }
+*/
 
                             /*
                             m_Codec = MediaCodec.createDecoderByType("video/avc");
                             Log.e("decoder","decode wile begin_4");
                             m_Codec.configure(mediaFormat, m_Surface, null, 0);
                             */
+                            /*
                             if(m_Codec == null)
                             {
                                 Log.e("Decodc","can't find video info");
@@ -96,6 +103,7 @@ public class Main extends Activity {
                             m_Codec.start();
                             //*/
 
+                            /*
                             Socket sc;
                             DataInputStream netInputStream;
                             DataOutputStream netOutputStream;
@@ -115,12 +123,12 @@ public class Main extends Activity {
 
                                 netInputStream = new DataInputStream(sc.getInputStream());
                                 netOutputStream = new DataOutputStream(sc.getOutputStream());
-
-                                //*
+*/
+                                /*
                                 ByteBuffer[] inputBuffers = m_Codec.getInputBuffers();
                                 ByteBuffer[] outputBuffers = m_Codec.getOutputBuffers();
                                 //*/
-
+/*
                                 byte[] buffcontent = new byte[100*1204];
 
                                 int mCount=0;
@@ -133,7 +141,7 @@ public class Main extends Activity {
                                     System.out.println("__read "+1+" bytes."+buffcontent[0]+":"+buffcontent[1]);
 
                                     //length = ct;
-//*
+
                                     int inputBufferIndex = m_Codec.dequeueInputBuffer(-1);
                                     if (inputBufferIndex>=0){
                                         ByteBuffer inputBuffer = inputBuffers[inputBufferIndex];
@@ -146,12 +154,12 @@ public class Main extends Activity {
 
 
                                         System.out.println("__read: "+sampleSize+" bytes."+buffcontent[0]+":"+buffcontent[1]);
-/*
+
                                         inputBuffer.clear();
                                         inputBuffer.put(buffcontent,0,length);
                                         m_Codec.queueInputBuffer(inputBufferIndex, 0, length, mCount * 1000000 / 25, 0);
                                         mCount++;
-                                    */
+
                                     }
 
                                     MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
@@ -160,9 +168,10 @@ public class Main extends Activity {
                                         m_Codec.releaseOutputBuffer(outputBufferIndex, true);
                                         outputBufferIndex = m_Codec.dequeueOutputBuffer(bufferInfo, 0);
                                     }
-//*/
+
                                     System.out.println("read next frame");
                                 }
+                        //*/
                             }
                             catch(Exception e)
                             {
