@@ -15,6 +15,7 @@ import android.view.MenuItem;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.FileOutputStream;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 
@@ -57,6 +58,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.nio.channels.FileChannel;
 
 
 public class Main extends Activity {
@@ -71,7 +73,7 @@ public class Main extends Activity {
     private static final String MIME_TYPE = "video/avc";    // H.264 Advanced Video Coding
     private static final int FRAME_RATE = 30;               // 30fps
     private static final int IFRAME_INTERVAL = 5;           // 5 seconds between I-frames
-    private static final long DURATION_SEC = 32;             // 8 seconds of video
+    private static final long DURATION_SEC = 8;             // 8 seconds of video
 
     // Fragment shader that swaps color channels around.
     private static final String SWAPPED_FRAGMENT_SHADER =
@@ -96,6 +98,12 @@ public class Main extends Activity {
 
     // allocate one of these up front so we don't need to do it every time
     private MediaCodec.BufferInfo mBufferInfo;
+
+    byte[] m_info = null;
+
+
+    FileOutputStream m_fos;
+    FileChannel m_fch;
 
 
     @Override
@@ -301,6 +309,12 @@ public class Main extends Activity {
             releaseCamera();
             releaseEncoder();
             releaseSurfaceTexture();
+
+            try {
+                m_fch.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -446,6 +460,21 @@ public class Main extends Activity {
                 "test2." + width + "x" + height + ".mp4").toString();
         Log.i(TAG, "Output file is " + outputPath);
 
+        File f=new File(OUTPUT_DIR,"test2." + width + "x" + height + ".264");
+        try
+        {
+            m_fos = new FileOutputStream(f);
+
+            m_fch=m_fos.getChannel();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+
+        //m_fch=m_fos.getChannel();
+
+
 
         // Create a MediaMuxer.  We can't add the video track and start() the muxer here,
         // because our MediaFormat doesn't have the Magic Goodies.  These can only be
@@ -508,6 +537,10 @@ public class Main extends Activity {
         ByteBuffer[] encoderOutputBuffers = mEncoder.getOutputBuffers();
         while (true) {
             int encoderStatus = mEncoder.dequeueOutputBuffer(mBufferInfo, TIMEOUT_USEC);
+            //Log.e("Codec info", "Info is:"+mBufferInfo.flags+" offset:"+mBufferInfo.offset+","+mBufferInfo.size+","+mBufferInfo.presentationTimeUs);
+
+
+
             if (encoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER) {
                 // no output available yet
                 if (!endOfStream) {
@@ -530,6 +563,9 @@ public class Main extends Activity {
                 mTrackIndex = mMuxer.addTrack(newFormat);
                 mMuxer.start();
                 mMuxerStarted = true;
+
+
+
             } else if (encoderStatus < 0) {
                 Log.w(TAG, "unexpected result from encoder.dequeueOutputBuffer: " +
                         encoderStatus);
@@ -541,12 +577,14 @@ public class Main extends Activity {
                             " was null");
                 }
 
+                /*
                 if ((mBufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
                     // The codec config data was pulled out and fed to the muxer when we got
                     // the INFO_OUTPUT_FORMAT_CHANGED status.  Ignore it.
                     if (VERBOSE) Log.e(TAG, "ignoring BUFFER_FLAG_CODEC_CONFIG");
                     mBufferInfo.size = 0;
                 }
+                */
 
                 if (mBufferInfo.size != 0) {
                     if (!mMuxerStarted) {
@@ -556,6 +594,18 @@ public class Main extends Activity {
                     // adjust the ByteBuffer values to match BufferInfo (not needed?)
                     encodedData.position(mBufferInfo.offset);
                     encodedData.limit(mBufferInfo.offset + mBufferInfo.size);
+
+                    //m_fos.write(encodedData.get());
+
+                    try {
+                        while(encodedData.hasRemaining()) {
+                            Log.e("fileop","write to file :"+mBufferInfo.size);
+                            m_fch.write(encodedData);
+                        }
+                    } catch (IOException e) {
+                        Log.e("fileop","write to file error");
+                        e.printStackTrace();
+                    }
 
                     mMuxer.writeSampleData(mTrackIndex, encodedData, mBufferInfo);
                     if (VERBOSE) Log.e(TAG, "sent " + mBufferInfo.size + " bytes to muxer");
@@ -757,6 +807,9 @@ public class Main extends Activity {
 
             mTextureRender = null;
             mSurfaceTexture = null;
+
+
+
         }
 
         /**
